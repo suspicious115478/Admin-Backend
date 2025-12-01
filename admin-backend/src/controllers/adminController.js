@@ -166,9 +166,9 @@ const getOrdersByAdminId = async (req, res) => {
     try {
         // Query the 'orders' table in Supabase
         const { data, error } = await supabase
-            .from('orders')
+            .from('dispatch')
             .select('order_id, order_status') 
-            .eq('dispatch_admin_id', adminId); // Assuming 'dispatch_admin_id' links the order to the admin
+            .eq('admin_id', adminId); // Assuming 'dispatch_admin_id' links the order to the admin
 
         if (error) {
             console.error('[ORDERS LOOKUP ERROR] Supabase Query Failed:', error);
@@ -199,3 +199,4 @@ module.exports = {
     // 🔥 EXPORT THE NEW FUNCTION
     getOrdersByAdminId,
 };
+
