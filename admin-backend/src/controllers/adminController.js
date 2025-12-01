@@ -1,6 +1,8 @@
 // admin-backend/src/controllers/adminController.js
 
 const { db } = require('../utils/firebaseAdmin');
+// 🔥 IMPORT THE NEW SUPABASE CLIENT
+const { supabase } = require('../utils/supabaseClient'); 
 
 // --- 🔥 NEW FUNCTION: Register Admin Handler ---
 /**
@@ -70,7 +72,7 @@ const registerAdmin = async (req, res) => {
             errorName: error.name,
             errorMessage: error.message,
             errorCode: error.code || 'N/A',
-            stack: error.stack.substring(0, 500) + '...' // Limit stack trace for cleaner logs
+            stack: error.stack ? error.stack.substring(0, 500) + '...' : 'N/A'
         });
         res.status(500).json({ 
             message: 'Failed to register admin details in Firebase RTDB.', 
@@ -146,8 +148,54 @@ const getAdminIdByFirebaseUid = async (req, res) => {
     }
 };
 
+// --- 🔥 NEW FUNCTION: Get Orders by Admin ID from Supabase ---
+/**
+ * API Handler: GET /api/admin/orders/:adminId
+ * Fetches orders (order_id, order_status) from Supabase 
+ * where the dispatch_admin_id matches the given adminId.
+ */
+const getOrdersByAdminId = async (req, res) => {
+    const { adminId } = req.params;
+
+    console.log(`[ORDERS LOOKUP START] Fetching orders for Admin ID: ${adminId}`);
+
+    if (!adminId) {
+        return res.status(400).json({ message: 'Missing Admin ID parameter.' });
+    }
+
+    try {
+        // Query the 'orders' table in Supabase
+        const { data, error } = await supabase
+            .from('orders')
+            .select('order_id, order_status') 
+            .eq('dispatch_admin_id', adminId); // Assuming 'dispatch_admin_id' links the order to the admin
+
+        if (error) {
+            console.error('[ORDERS LOOKUP ERROR] Supabase Query Failed:', error);
+            return res.status(500).json({ 
+                message: 'Error fetching orders from Supabase.', 
+                details: error.message 
+            });
+        }
+
+        if (!data || data.length === 0) {
+            console.log(`[ORDERS LOOKUP INFO] No orders found for Admin ID: ${adminId}`);
+            return res.status(200).json({ message: 'No orders found.', orders: [] });
+        }
+
+        console.log(`[ORDERS LOOKUP SUCCESS] Found ${data.length} orders for Admin ID ${adminId}.`);
+        
+        res.json({ orders: data });
+
+    } catch (error) {
+        console.error('[ORDERS LOOKUP CRITICAL ERROR] Uncaught error in controller:', error);
+        res.status(500).json({ message: 'Internal Server Error.', details: error.message });
+    }
+};
+
 module.exports = {
     getAdminIdByFirebaseUid,
-    // 🔥 EXPORT THE NEW REGISTRATION FUNCTION
     registerAdmin,
+    // 🔥 EXPORT THE NEW FUNCTION
+    getOrdersByAdminId,
 };
