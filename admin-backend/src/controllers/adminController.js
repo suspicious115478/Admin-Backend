@@ -157,33 +157,36 @@ const getAdminIdByFirebaseUid = async (req, res) => {
 const getOrdersByAdminId = async (req, res) => {
     const { adminId } = req.params;
 
-    console.log(`[ORDERS LOOKUP START] Fetching orders for Admin ID: ${adminId}`);
+    console.log(`[ORDERS LOOKUP START] Fetching CANCELLED orders for Admin ID: ${adminId}`);
 
     if (!adminId) {
         return res.status(400).json({ message: 'Missing Admin ID parameter.' });
     }
 
     try {
-        // Query the 'orders' table in Supabase
+        // Query the 'dispatch' table in Supabase
         const { data, error } = await supabase
             .from('dispatch')
-            .select('order_id, order_status') 
-            .eq('admin_id', adminId); // Assuming 'dispatch_admin_id' links the order to the admin
+            // 🔥 UPDATE 1: Select the required columns
+            .select('order_id, order_status, category, order_request, request_address') 
+            .eq('admin_id', adminId) // Filter by the Admin ID
+            // 🔥 UPDATE 2: Filter by Cancelled status
+            .eq('order_status', 'Cancelled'); 
 
         if (error) {
             console.error('[ORDERS LOOKUP ERROR] Supabase Query Failed:', error);
             return res.status(500).json({ 
-                message: 'Error fetching orders from Supabase.', 
+                message: 'Error fetching cancelled orders from Supabase.', 
                 details: error.message 
             });
         }
 
         if (!data || data.length === 0) {
-            console.log(`[ORDERS LOOKUP INFO] No orders found for Admin ID: ${adminId}`);
-            return res.status(200).json({ message: 'No orders found.', orders: [] });
+            console.log(`[ORDERS LOOKUP INFO] No CANCELLED orders found for Admin ID: ${adminId}`);
+            return res.status(200).json({ message: 'No cancelled orders found.', orders: [] });
         }
 
-        console.log(`[ORDERS LOOKUP SUCCESS] Found ${data.length} orders for Admin ID ${adminId}.`);
+        console.log(`[ORDERS LOOKUP SUCCESS] Found ${data.length} CANCELLED orders for Admin ID ${adminId}.`);
         
         res.json({ orders: data });
 
@@ -196,7 +199,6 @@ const getOrdersByAdminId = async (req, res) => {
 module.exports = {
     getAdminIdByFirebaseUid,
     registerAdmin,
-    // 🔥 EXPORT THE NEW FUNCTION
     getOrdersByAdminId,
 };
 
